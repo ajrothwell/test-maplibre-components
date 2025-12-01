@@ -3,10 +3,14 @@ import { ref } from 'vue';
 import Map from './components/Map.vue';
 import MapLayer from './components/MapLayer.vue';
 import MapMarker from './components/MapMarker.vue';
-import MapButton from './components/MapButton.vue';
 import DrawTool from './components/DrawTool.vue';
 import MapNavigationControl from './components/MapNavigationControl.vue';
+import GeolocationButton from './components/GeolocationButton.vue';
+import ImageryToggleButton from './components/ImageryToggleButton.vue';
+import StreetViewButton from './components/StreetViewButton.vue';
+import MeasureButton from './components/MeasureButton.vue';
 import imageryIcon from './assets/images/imagery_small.png';
+import basemapIcon from './assets/images/basemap_small.png';
 
 const mapCenter = ref([-75.1652, 39.9526]);
 const mapZoom = ref(16);
@@ -20,8 +24,8 @@ const onMapLoad = (map) => {
 };
 
 const onMapClick = (e) => {
-  clickedCoords.value = e.lngLat;
-  console.log('Clicked at:', e.lngLat);
+  clickedCoords.value = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+  console.log('Clicked at:', clickedCoords.value);
 };
 
 const onMapMove = (data) => {
@@ -30,12 +34,24 @@ const onMapMove = (data) => {
   currentZoom.value = data.zoom;
 };
 
-const onStreetViewClick = () => {
-  console.log('Street View button clicked');
+const onPolygonComplete = (geojson) => {
+  console.log('Polygon completed:', geojson);
 };
 
-const onTargetClick = () => {
-  console.log('Target button clicked');
+const onImageryToggled = (visible) => {
+  console.log('Imagery visible:', visible);
+};
+
+const onUserLocated = ({ longitude, latitude, accuracy }) => {
+  console.log('User location:', longitude, latitude, 'accuracy:', accuracy);
+};
+
+const onStreetViewOpened = ({ lat, lng }) => {
+  console.log('Street View opened at:', lat, lng);
+};
+
+const onMeasured = ({ totalDistance, unit }) => {
+  console.log(`Measured: ${totalDistance} ${unit}`);
 };
 
 </script>
@@ -112,30 +128,36 @@ const onTargetClick = () => {
             iconColor="#2563eb"
             popup="<h3>Camera Location</h3><p>Photo spot</p>"
           />
-          <MapButton
-            :image="imageryIcon"
+
+          <!-- Interactive Controls -->
+          <GeolocationButton
+            position="top-left"
+            @located="onUserLocated"
+          />
+          <ImageryToggleButton
+            :iconImage="imageryIcon"
+            :basemapImage="basemapIcon"
             position="top-right"
-            title="Imagery"
-            @click="onImageryClick"
+            imageryUrl="https://tiles.arcgis.com/tiles/fLeGjb7u4uXqeF9q/arcgis/rest/services/CityImagery_2024_1in/MapServer/tile/{z}/{y}/{x}"
+            imageryLabelsUrl="https://tiles.arcgis.com/tiles/fLeGjb7u4uXqeF9q/arcgis/rest/services/CityImagery_Labels/MapServer/tile/{z}/{y}/{x}"
+            baseLayerId="arcgis-labels"
+            @toggled="onImageryToggled"
           />
-          <MapButton
-            icon="fa-solid fa-street-view"
+          <StreetViewButton
             position="top-right"
-            title="Street View"
-            @click="onStreetViewClick"
+            @opened="onStreetViewOpened"
           />
-          <MapButton
-            icon="fa-solid fa-circle-dot"
-            position="bottom-left"
-            title="Target"
-            @click="onTargetClick"
-          />
+          <!-- <MeasureButton
+            position="top-right"
+            unit="feet"
+            @measured="onMeasured"
+          /> -->
           <DrawTool
             position="bottom-right"
+            @polygonComplete="onPolygonComplete"
           />
         </Map>
       </div>
-      <div class="sidebar"></div>
     </div>
   </div>
 </template>

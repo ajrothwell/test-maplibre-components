@@ -1,5 +1,6 @@
 <script setup>
-import { inject, ref, onBeforeUnmount, watchEffect, watch } from 'vue';
+import { ref, onBeforeUnmount, watch } from 'vue';
+import { useMapControl } from '../composables/useMapControl';
 
 const props = defineProps({
   icon: {
@@ -22,8 +23,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['polygonComplete']);
-
-const map = inject('map');
 const isDrawing = ref(false);
 const drawingPoints = ref([]);
 const completedPolygons = ref([]);
@@ -744,28 +743,20 @@ class DrawToolControl {
 
 let controlInstance = null;
 
-// Setup drawing layers and control when map is ready
-let stopWatch = null;
-stopWatch = watchEffect(() => {
-  if (!map.value) return;
-
-  if (stopWatch) {
-    stopWatch();
-    stopWatch = null;
-  }
-
-  // Add the control to the map
+// Use the composable to handle control lifecycle
+const { map } = useMapControl(props, (mapInstance) => {
   controlInstance = new DrawToolControl(props.icon, props.title, props.iconSize, handleClick);
-  map.value.addControl(controlInstance, props.position);
 
   // Wait for map to load before setting up layers
-  if (map.value.loaded()) {
+  if (mapInstance.loaded()) {
     setupCompletedPolygonsLayers();
   } else {
-    map.value.once('load', () => {
+    mapInstance.once('load', () => {
       setupCompletedPolygonsLayers();
     });
   }
+
+  return controlInstance;
 });
 
 // Watch isDrawing to update button style
@@ -786,15 +777,6 @@ onBeforeUnmount(() => {
   } catch (error) {
     // Ignore errors during hot reload
     console.warn('Error removing polygon click handler:', error.message);
-  }
-
-  // Remove control
-  if (map.value && controlInstance) {
-    try {
-      map.value.removeControl(controlInstance);
-    } catch (error) {
-      console.warn('Error removing draw tool control:', error.message);
-    }
   }
 });
 </script>

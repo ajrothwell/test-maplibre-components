@@ -1,5 +1,5 @@
 <script setup>
-import { inject, onBeforeUnmount, watchEffect } from 'vue';
+import { useMapControl, createButtonControl } from '../composables/useMapControl';
 
 const props = defineProps({
   icon: {
@@ -26,85 +26,15 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click']);
-const map = inject('map');
 
 const handleClick = () => {
   emit('click');
 };
 
-// Create a MapLibre IControl
-class ButtonControl {
-  constructor(icon, image, title, iconSize, clickHandler) {
-    this._icon = icon;
-    this._image = image;
-    this._title = title;
-    this._iconSize = iconSize;
-    this._clickHandler = clickHandler;
-  }
-
-  onAdd(map) {
-    this._map = map;
-    this._container = document.createElement('div');
-    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-
-    this._button = document.createElement('button');
-    this._button.className = 'map-button';
-    this._button.type = 'button';
-    this._button.title = this._title;
-    this._button.onclick = this._clickHandler;
-
-    // If image is provided, use it as background
-    if (this._image) {
-      this._button.style.backgroundImage = `url("${this._image}")`;
-      this._button.style.backgroundSize = 'cover';
-      this._button.style.backgroundPosition = 'center';
-      this._button.style.backgroundRepeat = 'no-repeat';
-      this._button.classList.add('has-image');
-    } else if (this._icon) {
-      // Otherwise use icon
-      const iconElement = document.createElement('i');
-      iconElement.className = this._icon;
-      iconElement.style.fontSize = `${this._iconSize}px`;
-      this._button.appendChild(iconElement);
-    }
-
-    this._container.appendChild(this._button);
-
-    return this._container;
-  }
-
-  onRemove() {
-    if (this._container && this._container.parentNode) {
-      this._container.parentNode.removeChild(this._container);
-    }
-    this._map = undefined;
-  }
-}
-
-let control = null;
-let stopWatch = null;
-
-stopWatch = watchEffect(() => {
-  if (!map.value) return;
-
-  if (stopWatch) {
-    stopWatch();
-    stopWatch = null;
-  }
-
-  control = new ButtonControl(props.icon, props.image, props.title, props.iconSize, handleClick);
-  map.value.addControl(control, props.position);
-});
-
-onBeforeUnmount(() => {
-  if (map.value && control) {
-    try {
-      map.value.removeControl(control);
-    } catch (error) {
-      console.warn('Error removing button control:', error.message);
-    }
-  }
-});
+// Use the composable to handle control lifecycle
+useMapControl(props, () =>
+  createButtonControl(props.icon, props.image, props.title, props.iconSize, handleClick)
+);
 </script>
 
 <template>
