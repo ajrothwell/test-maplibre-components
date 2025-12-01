@@ -6,6 +6,7 @@ import MapMarker from './components/MapMarker.vue';
 import MapButton from './components/MapButton.vue';
 import DrawTool from './components/DrawTool.vue';
 import MapNavigationControl from './components/MapNavigationControl.vue';
+import imageryIcon from './assets/images/imagery_small.png';
 
 const mapCenter = ref([-75.1652, 39.9526]);
 const mapZoom = ref(16);
@@ -110,6 +111,12 @@ const onTargetClick = () => {
             iconSize="28"
             iconColor="#2563eb"
             popup="<h3>Camera Location</h3><p>Photo spot</p>"
+          />
+          <MapButton
+            :image="imageryIcon"
+            position="top-right"
+            title="Imagery"
+            @click="onImageryClick"
           />
           <MapButton
             icon="fa-solid fa-street-view"
