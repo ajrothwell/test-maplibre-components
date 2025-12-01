@@ -7,9 +7,8 @@ import MapButton from './components/MapButton.vue';
 import DrawTool from './components/DrawTool.vue';
 import MapNavigationControl from './components/MapNavigationControl.vue';
 
-const mapRef = ref(null);
 const mapCenter = ref([-75.1652, 39.9526]);
-const mapZoom = ref(12);
+const mapZoom = ref(16);
 
 const clickedCoords = ref(null);
 const currentCenter = ref(null);
@@ -25,6 +24,7 @@ const onMapClick = (e) => {
 };
 
 const onMapMove = (data) => {
+  // console.log('Map moved. New center:', data.center, 'New zoom:', data.zoom);
   currentCenter.value = data.center;
   currentZoom.value = data.zoom;
 };
@@ -34,10 +34,7 @@ const onStreetViewClick = () => {
 };
 
 const onTargetClick = () => {
-  if (mapRef.value && mapRef.value.getMap()) {
-    const map = mapRef.value.getMap();
-    map.flyTo({ center: [-75.1652, 39.9526], zoom: 15 });
-  }
+  console.log('Target button clicked');
 };
 
 </script>
@@ -56,7 +53,6 @@ const onTargetClick = () => {
           @load="onMapLoad"
           @click="onMapClick"
           @move="onMapMove"
-          ref="mapRef"
         >
           <MapNavigationControl position="bottom-left" />
           <MapLayer
@@ -123,7 +119,7 @@ const onTargetClick = () => {
           />
           <MapButton
             icon="fa-solid fa-circle-dot"
-            position="top-left"
+            position="bottom-left"
             title="Target"
             @click="onTargetClick"
           />

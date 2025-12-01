@@ -10,7 +10,7 @@ const props = defineProps({
   },
   zoom: {
     type: Number,
-    default: 9
+    default: 16
   },
   style: {
     type: [String, Object],
@@ -85,10 +85,14 @@ onMounted(() => {
   map.value.on('zoom', () => {
     emit('zoom', map.value.getZoom());
   });
-
-  // Add navigation controls
-  // map.value.addControl(new maplibregl.NavigationControl(), 'bottom-left');
 });
+
+const getMap = () => {
+  console.log('getMap called, map.value:', map.value);
+  return map.value;
+};
+
+const test = 8;
 
 // Watch for prop changes
 watch(() => props.center, (newCenter) => {

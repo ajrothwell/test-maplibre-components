@@ -80,13 +80,18 @@ const addLayer = () => {
 const removeLayer = () => {
   if (!map.value) return;
 
-  if (map.value.getLayer(props.id)) {
-    map.value.removeLayer(props.id);
-  }
+  try {
+    if (map.value.getLayer && map.value.getLayer(props.id)) {
+      map.value.removeLayer(props.id);
+    }
 
-  // Remove source if it was added inline
-  if (typeof props.source === 'object' && map.value.getSource(props.id)) {
-    map.value.removeSource(props.id);
+    // Remove source if it was added inline
+    if (typeof props.source === 'object' && map.value.getSource && map.value.getSource(props.id)) {
+      map.value.removeSource(props.id);
+    }
+  } catch (error) {
+    // Ignore errors during hot reload when map is being destroyed
+    console.warn('Error removing layer during cleanup:', error.message);
   }
 };
 

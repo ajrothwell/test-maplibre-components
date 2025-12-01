@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { inject, onBeforeUnmount, watchEffect } from 'vue';
 
 const props = defineProps({
   icon: {
@@ -22,49 +22,87 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click']);
+const map = inject('map');
 
 const handleClick = () => {
   emit('click');
 };
 
-const positionStyle = computed(() => {
-  const positions = {
-    'top-left': { top: '10px', left: '10px' },
-    'top-right': { top: '10px', right: '10px' },
-    'bottom-left': { bottom: '10px', left: '10px' },
-    'bottom-right': { bottom: '10px', right: '10px' }
-  };
-  return positions[props.position];
+// Create a MapLibre IControl
+class ButtonControl {
+  constructor(icon, title, iconSize, clickHandler) {
+    this._icon = icon;
+    this._title = title;
+    this._iconSize = iconSize;
+    this._clickHandler = clickHandler;
+  }
+
+  onAdd(map) {
+    this._map = map;
+    this._container = document.createElement('div');
+    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+
+    this._button = document.createElement('button');
+    this._button.className = 'map-button';
+    this._button.type = 'button';
+    this._button.title = this._title;
+    this._button.onclick = this._clickHandler;
+
+    const iconElement = document.createElement('i');
+    iconElement.className = this._icon;
+    iconElement.style.fontSize = `${this._iconSize}px`;
+
+    this._button.appendChild(iconElement);
+    this._container.appendChild(this._button);
+
+    return this._container;
+  }
+
+  onRemove() {
+    if (this._container && this._container.parentNode) {
+      this._container.parentNode.removeChild(this._container);
+    }
+    this._map = undefined;
+  }
+}
+
+let control = null;
+let stopWatch = null;
+
+stopWatch = watchEffect(() => {
+  if (!map.value) return;
+
+  if (stopWatch) {
+    stopWatch();
+    stopWatch = null;
+  }
+
+  control = new ButtonControl(props.icon, props.title, props.iconSize, handleClick);
+  map.value.addControl(control, props.position);
 });
 
-const iconStyle = computed(() => ({
-  fontSize: `${props.iconSize}px`
-}));
+onBeforeUnmount(() => {
+  if (map.value && control) {
+    try {
+      map.value.removeControl(control);
+    } catch (error) {
+      console.warn('Error removing button control:', error.message);
+    }
+  }
+});
 </script>
 
 <template>
-  <div class="map-button-container" :style="positionStyle">
-    <button class="map-button" @click="handleClick" :title="title">
-      <i :class="icon" :style="iconStyle"></i>
-    </button>
-  </div>
+  <!-- Control is added directly to the map, no template needed -->
 </template>
 
-<style scoped>
-.map-button-container {
-  position: absolute;
-  z-index: 1;
-  pointer-events: none;
-}
-
+<style>
+/* Global styles for map button controls */
 .map-button {
-  pointer-events: auto;
-  width: 34px;
-  height: 34px;
+  width: 29px;
+  height: 29px;
   background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -74,11 +112,11 @@ const iconStyle = computed(() => ({
 }
 
 .map-button:hover {
-  background-color: #f5f5f5;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .map-button:active {
-  background-color: #e8e8e8;
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .map-button i {

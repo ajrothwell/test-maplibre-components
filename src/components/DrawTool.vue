@@ -1,5 +1,5 @@
 <script setup>
-import { computed, inject, ref, onBeforeUnmount, watchEffect } from 'vue';
+import { inject, ref, onBeforeUnmount, watchEffect, watch } from 'vue';
 
 const props = defineProps({
   icon: {
@@ -33,10 +33,14 @@ const drawLayerId = 'drawing-polygon-layer';
 const drawLineLayerId = 'drawing-polygon-line-layer';
 const drawPointsSourceId = 'drawing-points-source';
 const drawPointsLayerId = 'drawing-points-layer';
+const drawLabelsSourceId = 'drawing-labels-source';
+const drawLabelsLayerId = 'drawing-labels-layer';
 const completedPolygonsSourceId = 'completed-polygons-source';
 const completedPolygonsLayerId = 'completed-polygons-layer';
 const completedPolygonsLineLayerId = 'completed-polygons-line-layer';
 const completedPolygonsPointsLayerId = 'completed-polygons-points-layer';
+const completedPolygonsLabelsSourceId = 'completed-polygons-labels-source';
+const completedPolygonsLabelsLayerId = 'completed-polygons-labels-layer';
 
 let mapClickHandler = null;
 let polygonClickHandler = null;
@@ -57,6 +61,14 @@ const calculateDistance = (point1, point2) => {
   const meters = R * c;
   const feet = meters * 3.28084;
   return feet.toFixed(2);
+};
+
+// Calculate midpoint between two points
+const calculateMidpoint = (point1, point2) => {
+  return {
+    lng: (point1.lng + point2.lng) / 2,
+    lat: (point1.lat + point2.lat) / 2
+  };
 };
 
 const updateDrawingPolygon = () => {
@@ -100,6 +112,53 @@ const updateDrawingPolygon = () => {
   const pointsSource = map.value.getSource(drawPointsSourceId);
   if (pointsSource) {
     pointsSource.setData(pointsGeojson);
+  }
+
+  // Update segment labels
+  const labelFeatures = [];
+  for (let i = 1; i < drawingPoints.value.length; i++) {
+    const point1 = drawingPoints.value[i - 1];
+    const point2 = drawingPoints.value[i];
+    const midpoint = calculateMidpoint(point1, point2);
+    const distance = calculateDistance(point1, point2);
+
+    labelFeatures.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [midpoint.lng, midpoint.lat]
+      },
+      properties: {
+        distance: `${distance} ft`
+      }
+    });
+  }
+
+  // Add label for closing segment if we have at least 3 points
+  if (drawingPoints.value.length >= 3) {
+    const firstPoint = drawingPoints.value[0];
+    const lastPoint = drawingPoints.value[drawingPoints.value.length - 1];
+    const midpoint = calculateMidpoint(lastPoint, firstPoint);
+    const distance = calculateDistance(lastPoint, firstPoint);
+
+    labelFeatures.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [midpoint.lng, midpoint.lat]
+      },
+      properties: {
+        distance: `${distance} ft`
+      }
+    });
+  }
+
+  const labelsSource = map.value.getSource(drawLabelsSourceId);
+  if (labelsSource) {
+    labelsSource.setData({
+      type: 'FeatureCollection',
+      features: labelFeatures
+    });
   }
 };
 
@@ -150,6 +209,61 @@ const updateCompletedPolygons = () => {
       features: pointFeatures
     });
   }
+
+  // Update segment labels for completed polygons
+  const labelFeatures = completedPolygons.value.flatMap((polygon) => {
+    const labels = [];
+    for (let i = 1; i < polygon.points.length; i++) {
+      const point1 = polygon.points[i - 1];
+      const point2 = polygon.points[i];
+      const midpoint = calculateMidpoint(point1, point2);
+      const distance = calculateDistance(point1, point2);
+
+      labels.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [midpoint.lng, midpoint.lat]
+        },
+        properties: {
+          distance: `${distance} ft`,
+          polygonId: polygon.id,
+          active: polygon.id === activePolygonId.value
+        }
+      });
+    }
+
+    // Add label for closing segment
+    if (polygon.points.length >= 3) {
+      const firstPoint = polygon.points[0];
+      const lastPoint = polygon.points[polygon.points.length - 1];
+      const midpoint = calculateMidpoint(lastPoint, firstPoint);
+      const distance = calculateDistance(lastPoint, firstPoint);
+
+      labels.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [midpoint.lng, midpoint.lat]
+        },
+        properties: {
+          distance: `${distance} ft`,
+          polygonId: polygon.id,
+          active: polygon.id === activePolygonId.value
+        }
+      });
+    }
+
+    return labels;
+  });
+
+  const labelsSource = map.value.getSource(completedPolygonsLabelsSourceId);
+  if (labelsSource) {
+    labelsSource.setData({
+      type: 'FeatureCollection',
+      features: labelFeatures
+    });
+  }
 };
 
 const completePolygon = () => {
@@ -186,27 +300,38 @@ const completePolygon = () => {
 const cleanupDrawing = () => {
   if (!map.value) return;
 
-  // Remove click handler
-  if (mapClickHandler) {
-    map.value.off('click', mapClickHandler);
-    mapClickHandler = null;
-  }
+  try {
+    // Remove click handler
+    if (mapClickHandler) {
+      map.value.off('click', mapClickHandler);
+      mapClickHandler = null;
+    }
 
-  // Remove layers and source
-  if (map.value.getLayer(drawPointsLayerId)) {
-    map.value.removeLayer(drawPointsLayerId);
-  }
-  if (map.value.getLayer(drawLineLayerId)) {
-    map.value.removeLayer(drawLineLayerId);
-  }
-  if (map.value.getLayer(drawLayerId)) {
-    map.value.removeLayer(drawLayerId);
-  }
-  if (map.value.getSource(drawPointsSourceId)) {
-    map.value.removeSource(drawPointsSourceId);
-  }
-  if (map.value.getSource(drawSourceId)) {
-    map.value.removeSource(drawSourceId);
+    // Remove layers and source
+    if (map.value.getLayer && map.value.getLayer(drawLabelsLayerId)) {
+      map.value.removeLayer(drawLabelsLayerId);
+    }
+    if (map.value.getLayer && map.value.getLayer(drawPointsLayerId)) {
+      map.value.removeLayer(drawPointsLayerId);
+    }
+    if (map.value.getLayer && map.value.getLayer(drawLineLayerId)) {
+      map.value.removeLayer(drawLineLayerId);
+    }
+    if (map.value.getLayer && map.value.getLayer(drawLayerId)) {
+      map.value.removeLayer(drawLayerId);
+    }
+    if (map.value.getSource && map.value.getSource(drawLabelsSourceId)) {
+      map.value.removeSource(drawLabelsSourceId);
+    }
+    if (map.value.getSource && map.value.getSource(drawPointsSourceId)) {
+      map.value.removeSource(drawPointsSourceId);
+    }
+    if (map.value.getSource && map.value.getSource(drawSourceId)) {
+      map.value.removeSource(drawSourceId);
+    }
+  } catch (error) {
+    // Ignore errors during hot reload when map is being destroyed
+    console.warn('Error cleaning up drawing layers:', error.message);
   }
 
   drawingPoints.value = [];
@@ -289,6 +414,36 @@ const setupCompletedPolygonsLayers = () => {
         ],
         'circle-stroke-color': '#fff',
         'circle-stroke-width': 2
+      }
+    });
+  }
+
+  // Add labels source for completed polygons
+  if (!map.value.getSource(completedPolygonsLabelsSourceId)) {
+    map.value.addSource(completedPolygonsLabelsSourceId, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: []
+      }
+    });
+  }
+
+  // Add labels layer for completed polygons
+  if (!map.value.getLayer(completedPolygonsLabelsLayerId)) {
+    map.value.addLayer({
+      id: completedPolygonsLabelsLayerId,
+      type: 'symbol',
+      source: completedPolygonsLabelsSourceId,
+      layout: {
+        'text-field': ['get', 'distance'],
+        'text-size': 12,
+        'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
+      },
+      paint: {
+        'text-color': '#ff0000',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 2
       }
     });
   }
@@ -389,6 +544,35 @@ const handleClick = () => {
       });
     }
 
+    // Add source and layer for segment labels
+    if (!map.value.getSource(drawLabelsSourceId)) {
+      map.value.addSource(drawLabelsSourceId, {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+    }
+
+    if (!map.value.getLayer(drawLabelsLayerId)) {
+      map.value.addLayer({
+        id: drawLabelsLayerId,
+        type: 'symbol',
+        source: drawLabelsSourceId,
+        layout: {
+          'text-field': ['get', 'distance'],
+          'text-size': 12,
+          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
+        },
+        paint: {
+          'text-color': '#ff0000',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 2
+        }
+      });
+    }
+
     // Add click handler
     mapClickHandler = (e) => {
       // Check if clicking on the first point to close polygon
@@ -424,20 +608,6 @@ const handleClick = () => {
   }
 };
 
-const positionStyle = computed(() => {
-  const positions = {
-    'top-left': { top: '10px', left: '10px' },
-    'top-right': { top: '10px', right: '10px' },
-    'bottom-left': { bottom: '10px', left: '10px' },
-    'bottom-right': { bottom: '10px', right: '10px' }
-  };
-  return positions[props.position];
-});
-
-const iconStyle = computed(() => ({
-  fontSize: `${props.iconSize}px`
-}));
-
 // Get the active polygon object
 const getActivePolygon = () => {
   if (activePolygonId.value === null) return null;
@@ -453,7 +623,128 @@ const getDisplayPoints = () => {
   return activePolygon ? activePolygon.points : [];
 };
 
-// Setup drawing layers when map is ready
+// Create table HTML
+const createTableHTML = () => {
+  const points = getDisplayPoints();
+  if (points.length === 0) return '';
+
+  let rows = '';
+  points.forEach((point, index) => {
+    const distance = index === 0 ? '-' : calculateDistance(points[index - 1], point);
+    rows += `
+      <tr>
+        <td>${point.lat.toFixed(6)}</td>
+        <td>${point.lng.toFixed(6)}</td>
+        <td>${distance}</td>
+      </tr>
+    `;
+  });
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Lat</th>
+          <th>Lng</th>
+          <th>Distance (ft)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+};
+
+// Update table display
+const updateTableDisplay = () => {
+  if (!controlInstance) return;
+
+  const tableContainer = controlInstance._tableContainer;
+  if (!tableContainer) return;
+
+  const shouldShow = (isDrawing.value && drawingPoints.value.length > 0) ||
+                     (activePolygonId.value !== null && getActivePolygon());
+
+  if (shouldShow) {
+    tableContainer.style.display = 'block';
+    tableContainer.innerHTML = createTableHTML();
+  } else {
+    tableContainer.style.display = 'none';
+  }
+};
+
+// Watch for changes to update table
+watch([isDrawing, drawingPoints, activePolygonId, completedPolygons], () => {
+  updateTableDisplay();
+}, { deep: true });
+
+// Create a MapLibre IControl for DrawTool
+class DrawToolControl {
+  constructor(icon, title, iconSize, clickHandler) {
+    this._icon = icon;
+    this._title = title;
+    this._iconSize = iconSize;
+    this._clickHandler = clickHandler;
+  }
+
+  onAdd(map) {
+    this._map = map;
+    this._container = document.createElement('div');
+    this._container.className = 'maplibregl-ctrl';
+    this._container.style.display = 'flex';
+    this._container.style.alignItems = 'flex-end';
+    this._container.style.gap = '10px';
+
+    // Create table container
+    this._tableContainer = document.createElement('div');
+    this._tableContainer.className = 'vertices-table';
+    this._tableContainer.style.display = 'none';
+
+    // Create button container
+    this._buttonContainer = document.createElement('div');
+    this._buttonContainer.className = 'maplibregl-ctrl-group';
+
+    this._button = document.createElement('button');
+    this._button.className = 'map-button';
+    this._button.type = 'button';
+    this._button.title = this._title;
+    this._button.onclick = this._clickHandler;
+
+    const iconElement = document.createElement('i');
+    iconElement.className = this._icon;
+    iconElement.style.fontSize = `${this._iconSize}px`;
+
+    this._button.appendChild(iconElement);
+    this._buttonContainer.appendChild(this._button);
+
+    this._container.appendChild(this._tableContainer);
+    this._container.appendChild(this._buttonContainer);
+
+    return this._container;
+  }
+
+  setActive(active) {
+    if (this._button) {
+      if (active) {
+        this._button.classList.add('active');
+      } else {
+        this._button.classList.remove('active');
+      }
+    }
+  }
+
+  onRemove() {
+    if (this._container && this._container.parentNode) {
+      this._container.parentNode.removeChild(this._container);
+    }
+    this._map = undefined;
+  }
+}
+
+let controlInstance = null;
+
+// Setup drawing layers and control when map is ready
 let stopWatch = null;
 stopWatch = watchEffect(() => {
   if (!map.value) return;
@@ -462,6 +753,10 @@ stopWatch = watchEffect(() => {
     stopWatch();
     stopWatch = null;
   }
+
+  // Add the control to the map
+  controlInstance = new DrawToolControl(props.icon, props.title, props.iconSize, handleClick);
+  map.value.addControl(controlInstance, props.position);
 
   // Wait for map to load before setting up layers
   if (map.value.loaded()) {
@@ -473,65 +768,57 @@ stopWatch = watchEffect(() => {
   }
 });
 
+// Watch isDrawing to update button style
+watch(isDrawing, (newValue) => {
+  if (controlInstance) {
+    controlInstance.setActive(newValue);
+  }
+});
+
 onBeforeUnmount(() => {
   cleanupDrawing();
 
   // Remove polygon click handler
-  if (map.value && polygonClickHandler) {
-    map.value.off('click', polygonClickHandler);
+  try {
+    if (map.value && polygonClickHandler) {
+      map.value.off('click', polygonClickHandler);
+    }
+  } catch (error) {
+    // Ignore errors during hot reload
+    console.warn('Error removing polygon click handler:', error.message);
+  }
+
+  // Remove control
+  if (map.value && controlInstance) {
+    try {
+      map.value.removeControl(controlInstance);
+    } catch (error) {
+      console.warn('Error removing draw tool control:', error.message);
+    }
   }
 });
 </script>
 
 <template>
-  <div class="draw-tool-wrapper" :style="positionStyle">
-    <div v-if="(isDrawing && drawingPoints.length > 0) || (activePolygonId !== null && getActivePolygon())" class="vertices-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Lat</th>
-            <th>Lng</th>
-            <th>Distance (ft)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(point, index) in getDisplayPoints()" :key="index">
-            <td>{{ point.lat.toFixed(6) }}</td>
-            <td>{{ point.lng.toFixed(6) }}</td>
-            <td>
-              {{ index === 0 ? '-' : calculateDistance(getDisplayPoints()[index - 1], point) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <button
-      class="draw-tool-button"
-      :class="{ active: isDrawing }"
-      @click="handleClick"
-      :title="title"
-    >
-      <i :class="icon" :style="iconStyle"></i>
-    </button>
-  </div>
+  <!-- Control is added directly to the map, no template needed -->
 </template>
 
-<style scoped>
-.draw-tool-wrapper {
-  position: absolute;
-  z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  pointer-events: none;
+<style>
+/* Global styles for draw tool control */
+.map-button.active {
+  background-color: #088;
+}
+
+.map-button.active i {
+  color: #fff;
 }
 
 .vertices-table {
-  pointer-events: auto;
   background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  padding: 10px;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -539,67 +826,24 @@ onBeforeUnmount(() => {
 .vertices-table table {
   border-collapse: collapse;
   font-size: 12px;
-  min-width: 280px;
+  min-width: 250px;
 }
 
 .vertices-table th,
 .vertices-table td {
   padding: 4px 8px;
   text-align: right;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #eee;
 }
 
 .vertices-table th {
   font-weight: 600;
-  background-color: #f9fafb;
+  background-color: #f5f5f5;
   position: sticky;
   top: 0;
-  z-index: 1;
 }
 
-.vertices-table tbody tr:last-child td {
+.vertices-table tr:last-child td {
   border-bottom: none;
-}
-
-.vertices-table tbody tr:hover {
-  background-color: #f9fafb;
-}
-
-.draw-tool-button {
-  pointer-events: auto;
-  width: 34px;
-  height: 34px;
-  background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background-color 0.2s;
-  flex-shrink: 0;
-}
-
-.draw-tool-button:hover {
-  background-color: #f5f5f5;
-}
-
-.draw-tool-button:active {
-  background-color: #e8e8e8;
-}
-
-.draw-tool-button.active {
-  background-color: #2563eb;
-}
-
-.draw-tool-button.active i {
-  color: #fff;
-}
-
-.draw-tool-button i {
-  color: #333;
-  line-height: 1;
 }
 </style>
