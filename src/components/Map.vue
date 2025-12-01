@@ -87,13 +87,6 @@ onMounted(() => {
   });
 });
 
-const getMap = () => {
-  console.log('getMap called, map.value:', map.value);
-  return map.value;
-};
-
-const test = 8;
-
 // Watch for prop changes
 watch(() => props.center, (newCenter) => {
   if (map.value) {
