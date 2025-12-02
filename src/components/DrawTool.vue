@@ -70,6 +70,54 @@ const calculateMidpoint = (point1, point2) => {
   };
 };
 
+// Calculate total perimeter length in feet
+const calculateTotalLength = (points) => {
+  if (points.length < 2) return 0;
+
+  let totalLength = 0;
+  // Calculate distance for each segment
+  for (let i = 1; i < points.length; i++) {
+    totalLength += parseFloat(calculateDistance(points[i - 1], points[i]));
+  }
+
+  // Add closing segment if we have at least 3 points
+  if (points.length >= 3) {
+    totalLength += parseFloat(calculateDistance(points[points.length - 1], points[0]));
+  }
+
+  return totalLength.toFixed(2);
+};
+
+// Calculate area in square feet using the Shoelace formula
+const calculateArea = (points) => {
+  if (points.length < 3) return 0;
+
+  // Convert lat/lng to approximate meters using a simple projection
+  // This is approximate but works well for small areas
+  const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+  const metersPerDegreeLat = 111320; // meters per degree latitude
+  const metersPerDegreeLng = 111320 * Math.cos(centerLat * Math.PI / 180); // adjusted for longitude
+
+  // Convert points to x,y coordinates in meters
+  const coords = points.map(p => ({
+    x: p.lng * metersPerDegreeLng,
+    y: p.lat * metersPerDegreeLat
+  }));
+
+  // Apply Shoelace formula
+  let area = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const j = (i + 1) % coords.length;
+    area += coords[i].x * coords[j].y;
+    area -= coords[j].x * coords[i].y;
+  }
+  area = Math.abs(area) / 2;
+
+  // Convert square meters to square feet
+  const squareFeet = area * 10.7639;
+  return squareFeet.toFixed(2);
+};
+
 const updateDrawingPolygon = () => {
   if (!map.value || drawingPoints.value.length === 0) return;
 
@@ -296,6 +344,24 @@ const completePolygon = () => {
   map.value.getCanvas().style.cursor = '';
 };
 
+const deleteActivePolygon = () => {
+  if (!activePolygonId.value) return;
+
+  // Find and remove the active polygon
+  const index = completedPolygons.value.findIndex(p => p.id === activePolygonId.value);
+  if (index !== -1) {
+    completedPolygons.value.splice(index, 1);
+    activePolygonId.value = null;
+    updateCompletedPolygons();
+    updateTableDisplay();
+  }
+};
+
+// Expose delete function globally for the HTML button
+if (typeof window !== 'undefined') {
+  window.deleteActivePolygon = deleteActivePolygon;
+}
+
 const cleanupDrawing = () => {
   if (!map.value) return;
 
@@ -404,7 +470,12 @@ const setupCompletedPolygonsLayers = () => {
       type: 'circle',
       source: completedPolygonsPointsLayerId,
       paint: {
-        'circle-radius': 5,
+        'circle-radius': [
+          'case',
+          ['get', 'active'],
+          7,  // larger for active (draggable)
+          5   // smaller for inactive
+        ],
         'circle-color': [
           'case',
           ['get', 'active'],
@@ -465,6 +536,67 @@ const setupCompletedPolygonsLayers = () => {
   };
 
   map.value.on('click', polygonClickHandler);
+
+  // Set up drag handlers for active polygon vertices
+  let draggedPointIndex = null;
+  let draggedPolygonId = null;
+
+  map.value.on('mouseenter', completedPolygonsPointsLayerId, () => {
+    const activePolygon = getActivePolygon();
+    if (activePolygon) {
+      map.value.getCanvas().style.cursor = 'move';
+    }
+  });
+
+  map.value.on('mouseleave', completedPolygonsPointsLayerId, () => {
+    if (!isDrawing.value) {
+      map.value.getCanvas().style.cursor = '';
+    }
+  });
+
+  map.value.on('mousedown', completedPolygonsPointsLayerId, (e) => {
+    const activePolygon = getActivePolygon();
+    if (!activePolygon || e.features.length === 0) return;
+
+    const feature = e.features[0];
+    if (!feature.properties.active) return; // Only allow dragging active polygon points
+
+    e.preventDefault();
+
+    draggedPointIndex = feature.properties.index;
+    draggedPolygonId = feature.properties.polygonId;
+    map.value.getCanvas().style.cursor = 'grabbing';
+
+    const onMove = (e) => {
+      if (draggedPointIndex === null || draggedPolygonId === null) return;
+
+      const polygon = completedPolygons.value.find(p => p.id === draggedPolygonId);
+      if (!polygon) return;
+
+      // Update the point coordinates
+      const coords = e.lngLat;
+      polygon.points[draggedPointIndex] = { lat: coords.lat, lng: coords.lng };
+
+      // Update the polygon coordinates array
+      polygon.coordinates = polygon.points.map(p => [p.lng, p.lat]);
+      polygon.coordinates.push(polygon.coordinates[0]); // Close the polygon
+
+      // Update the display
+      updateCompletedPolygons();
+      updateTableDisplay();
+    };
+
+    const onUp = () => {
+      draggedPointIndex = null;
+      draggedPolygonId = null;
+      map.value.getCanvas().style.cursor = 'move';
+      map.value.off('mousemove', onMove);
+      map.value.off('mouseup', onUp);
+    };
+
+    map.value.on('mousemove', onMove);
+    map.value.on('mouseup', onUp);
+  });
 };
 
 const handleClick = () => {
@@ -639,6 +771,21 @@ const createTableHTML = () => {
     `;
   });
 
+  // Add closing row with first point to show the final distance
+  if (points.length >= 3) {
+    const closingDistance = calculateDistance(points[points.length - 1], points[0]);
+    rows += `
+      <tr>
+        <td>${points[0].lat.toFixed(6)}</td>
+        <td>${points[0].lng.toFixed(6)}</td>
+        <td>${closingDistance}</td>
+      </tr>
+    `;
+  }
+
+  const totalLength = calculateTotalLength(points);
+  const totalArea = calculateArea(points);
+
   return `
     <table>
       <thead>
@@ -652,6 +799,17 @@ const createTableHTML = () => {
         ${rows}
       </tbody>
     </table>
+    <div class="totals">
+      <div class="total-row">
+        <strong>Total Length:</strong> ${totalLength} ft
+      </div>
+      <div class="total-row">
+        <strong>Total Area:</strong> ${totalArea} sq ft
+      </div>
+    </div>
+    <button class="delete-polygon-btn" onclick="window.deleteActivePolygon && window.deleteActivePolygon()">
+      <i class="fa-solid fa-trash"></i> Delete
+    </button>
   `;
 };
 
@@ -827,5 +985,48 @@ onBeforeUnmount(() => {
 
 .vertices-table tr:last-child td {
   border-bottom: none;
+}
+
+.vertices-table .totals {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 2px solid #088;
+}
+
+.vertices-table .total-row {
+  font-size: 13px;
+  padding: 4px 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.vertices-table .total-row strong {
+  color: #333;
+}
+
+.vertices-table .delete-polygon-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.vertices-table .delete-polygon-btn:hover {
+  background-color: #c82333;
+}
+
+.vertices-table .delete-polygon-btn i {
+  font-size: 12px;
 }
 </style>
