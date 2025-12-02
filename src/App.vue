@@ -131,7 +131,7 @@ const onMeasured = ({ totalDistance, unit }) => {
 
           <!-- Interactive Controls -->
           <GeolocationButton
-            position="top-left"
+            position="bottom-left"
             @located="onUserLocated"
           />
           <ImageryToggleButton
@@ -187,6 +187,7 @@ header h1 {
 .content {
   flex: 1;
   display: flex;
+  flex-direction: row-reverse;
   overflow: hidden;
 }
 
