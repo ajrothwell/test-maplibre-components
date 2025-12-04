@@ -1,50 +1,49 @@
-<script setup>
-import { ref, onMounted, onBeforeUnmount, watch, provide } from 'vue';
-import maplibregl from 'maplibre-gl';
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, watch, provide, type Ref } from 'vue';
+import maplibregl, { type Map as MapLibreMap, type MapMouseEvent, type LngLatLike, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-const props = defineProps({
-  center: {
-    type: Array,
-    default: () => [-74.5, 40]
-  },
-  zoom: {
-    type: Number,
-    default: 16
-  },
-  style: {
-    type: [String, Object],
-    default: undefined
-  },
-  minZoom: {
-    type: Number,
-    default: 0
-  },
-  maxZoom: {
-    type: Number,
-    default: 22
-  },
-  pitch: {
-    type: Number,
-    default: 0
-  },
-  bearing: {
-    type: Number,
-    default: 0
-  }
+interface Props {
+  center?: LngLatLike;
+  zoom?: number;
+  style?: string | StyleSpecification;
+  minZoom?: number;
+  maxZoom?: number;
+  pitch?: number;
+  bearing?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  center: () => [-74.5, 40] as LngLatLike,
+  zoom: 16,
+  style: undefined,
+  minZoom: 0,
+  maxZoom: 22,
+  pitch: 0,
+  bearing: 0
 });
 
-const emit = defineEmits(['load', 'click', 'move', 'zoom', 'mapInstance']);
+interface Emits {
+  (e: 'load', map: MapLibreMap): void;
+  (e: 'click', event: MapMouseEvent): void;
+  (e: 'move', data: { center: { lng: number; lat: number }; zoom: number }): void;
+  (e: 'zoom', zoom: number): void;
+  (e: 'mapInstance', map: MapLibreMap): void;
+}
 
-const mapContainer = ref(null);
-const map = ref(null);
+const emit = defineEmits<Emits>();
+
+const mapContainer = ref<HTMLDivElement | null>(null);
+const map = ref<MapLibreMap | null>(null);
 
 // Provide map instance to child components
 provide('map', map);
 
 onMounted(() => {
+  if (!mapContainer.value) return;
+
   // Create a blank style if no style is provided
-  const mapStyle = props.style || {
+  const mapStyle: string | StyleSpecification = props.style || {
     version: 8,
     sources: {},
     layers: []
@@ -88,33 +87,45 @@ onMounted(() => {
 });
 
 // Watch for prop changes
-watch(() => props.center, (newCenter) => {
-  if (map.value) {
+watch(() => props.center, (newCenter: LngLatLike | undefined) => {
+  if (map.value && newCenter) {
     map.value.setCenter(newCenter);
   }
 });
 
-watch(() => props.zoom, (newZoom) => {
-  if (map.value) {
+watch(() => props.zoom, (newZoom: number | undefined) => {
+  if (map.value && newZoom !== undefined) {
     map.value.setZoom(newZoom);
   }
 });
 
-watch(() => props.pitch, (newPitch) => {
-  if (map.value) {
+watch(() => props.pitch, (newPitch: number | undefined) => {
+  if (map.value && newPitch !== undefined) {
     map.value.setPitch(newPitch);
   }
 });
 
-watch(() => props.bearing, (newBearing) => {
-  if (map.value) {
+watch(() => props.bearing, (newBearing: number | undefined) => {
+  if (map.value && newBearing !== undefined) {
     map.value.setBearing(newBearing);
   }
 });
 
-watch(() => props.style, (newStyle) => {
-  if (map.value) {
+watch(() => props.style, (newStyle: string | StyleSpecification | undefined) => {
+  if (map.value && newStyle) {
     map.value.setStyle(newStyle);
+  }
+});
+
+watch(() => props.minZoom, (newMinZoom: number | undefined) => {
+  if (map.value && newMinZoom !== undefined) {
+    map.value.setMinZoom(newMinZoom);
+  }
+});
+
+watch(() => props.maxZoom, (newMaxZoom: number | undefined) => {
+  if (map.value && newMaxZoom !== undefined) {
+    map.value.setMaxZoom(newMaxZoom);
   }
 });
 

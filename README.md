@@ -136,6 +136,7 @@ npm run preview
 ## Tech Stack
 
 - **Vue 3** - Composition API with `<script setup>`
+- **TypeScript** - Full type safety across all components, tests, and utilities
 - **MapLibre GL** - Open-source mapping library
 - **Vite** - Build tool and dev server
 - **Storybook** - Component development and documentation

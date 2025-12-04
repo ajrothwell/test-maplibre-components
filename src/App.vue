@@ -1,5 +1,6 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
+import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl';
 import Map from './components/Map.vue';
 import MapLayer from './components/MapLayer.vue';
 import MapMarker from './components/MapMarker.vue';
@@ -12,45 +13,45 @@ import MeasureButton from './components/MeasureButton.vue';
 import imageryIcon from './assets/images/imagery_small.png';
 import basemapIcon from './assets/images/basemap_small.png';
 
-const mapCenter = ref([-75.1652, 39.9526]);
-const mapZoom = ref(16);
+const mapCenter = ref<[number, number]>([-75.1652, 39.9526]);
+const mapZoom = ref<number>(16);
 
-const clickedCoords = ref(null);
-const currentCenter = ref(null);
-const currentZoom = ref(9);
+const clickedCoords = ref<{ lng: number; lat: number } | null>(null);
+const currentCenter = ref<{ lng: number; lat: number } | null>(null);
+const currentZoom = ref<number>(9);
 
-const onMapLoad = (map) => {
+const onMapLoad = (map: MapLibreMap) => {
   console.log('Map loaded successfully!', map);
 };
 
-const onMapClick = (e) => {
+const onMapClick = (e: MapMouseEvent) => {
   clickedCoords.value = { lng: e.lngLat.lng, lat: e.lngLat.lat };
   console.log('Clicked at:', clickedCoords.value);
 };
 
-const onMapMove = (data) => {
+const onMapMove = (data: { center: { lng: number; lat: number }; zoom: number }) => {
   // console.log('Map moved. New center:', data.center, 'New zoom:', data.zoom);
   currentCenter.value = data.center;
   currentZoom.value = data.zoom;
 };
 
-const onPolygonComplete = (geojson) => {
+const onPolygonComplete = (geojson: any) => {
   console.log('Polygon completed:', geojson);
 };
 
-const onImageryToggled = (visible) => {
+const onImageryToggled = (visible: boolean) => {
   console.log('Imagery visible:', visible);
 };
 
-const onUserLocated = ({ longitude, latitude, accuracy }) => {
+const onUserLocated = ({ longitude, latitude, accuracy }: { longitude: number; latitude: number; accuracy: number }) => {
   console.log('User location:', longitude, latitude, 'accuracy:', accuracy);
 };
 
-const onStreetViewOpened = ({ lat, lng }) => {
+const onStreetViewOpened = ({ lat, lng }: { lat: number; lng: number }) => {
   console.log('Street View opened at:', lat, lng);
 };
 
-const onMeasured = ({ totalDistance, unit }) => {
+const onMeasured = ({ totalDistance, unit }: { totalDistance: number; unit: string }) => {
   console.log(`Measured: ${totalDistance} ${unit}`);
 };
 

@@ -1,54 +1,36 @@
-<script setup>
-import { inject, onBeforeUnmount, watch, watchEffect } from 'vue';
+<script setup lang="ts">
+import { inject, onBeforeUnmount, watch, watchEffect, type Ref } from 'vue';
+import type { Map as MapLibreMap, SourceSpecification, LayerSpecification, FilterSpecification } from 'maplibre-gl';
 
-const props = defineProps({
-  id: {
-    type: String,
-    required: true
-  },
-  type: {
-    type: String,
-    required: true,
-    validator: (value) => ['fill', 'line', 'symbol', 'circle', 'fill-extrusion', 'raster', 'background', 'heatmap', 'hillshade'].includes(value)
-  },
-  source: {
-    type: [String, Object],
-    required: true
-  },
-  sourceLayer: {
-    type: String,
-    default: undefined
-  },
-  paint: {
-    type: Object,
-    default: () => ({})
-  },
-  layout: {
-    type: Object,
-    default: () => ({})
-  },
-  filter: {
-    type: Array,
-    default: undefined
-  },
-  minzoom: {
-    type: Number,
-    default: undefined
-  },
-  maxzoom: {
-    type: Number,
-    default: undefined
-  },
-  beforeId: {
-    type: String,
-    default: undefined
-  }
+type LayerType = 'fill' | 'line' | 'symbol' | 'circle' | 'fill-extrusion' | 'raster' | 'background' | 'heatmap' | 'hillshade';
+
+interface Props {
+  id: string;
+  type: LayerType;
+  source: string | SourceSpecification;
+  sourceLayer?: string;
+  paint?: Record<string, any>;
+  layout?: Record<string, any>;
+  filter?: FilterSpecification;
+  minzoom?: number;
+  maxzoom?: number;
+  beforeId?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  sourceLayer: undefined,
+  paint: () => ({}),
+  layout: () => ({}),
+  filter: undefined,
+  minzoom: undefined,
+  maxzoom: undefined,
+  beforeId: undefined
 });
 
-const map = inject('map');
+const map = inject<Ref<MapLibreMap | null>>('map');
 
 const addLayer = () => {
-  if (!map.value) return;
+  if (!map || !map.value) return;
 
   // Add source if it's an object (inline source definition)
   if (typeof props.source === 'object') {
@@ -58,7 +40,7 @@ const addLayer = () => {
   }
 
   // Build layer configuration
-  const layerConfig = {
+  const layerConfig: any = {
     id: props.id,
     type: props.type,
     source: typeof props.source === 'object' ? props.id : props.source,
@@ -78,7 +60,7 @@ const addLayer = () => {
 };
 
 const removeLayer = () => {
-  if (!map.value) return;
+  if (!map || !map.value) return;
 
   try {
     if (map.value.getLayer && map.value.getLayer(props.id)) {
@@ -91,14 +73,14 @@ const removeLayer = () => {
     }
   } catch (error) {
     // Ignore errors during hot reload when map is being destroyed
-    console.warn('Error removing layer during cleanup:', error.message);
+    console.warn('Error removing layer during cleanup:', (error as Error).message);
   }
 };
 
-let stopWatch = null;
+let stopWatch: (() => void) | null = null;
 
 stopWatch = watchEffect(() => {
-  if (!map.value) return;
+  if (!map || !map.value) return;
 
   // Stop watching once map is available
   if (stopWatch) {
@@ -114,26 +96,26 @@ stopWatch = watchEffect(() => {
 });
 
 // Watch for paint changes
-watch(() => props.paint, (newPaint) => {
-  if (map.value && map.value.getLayer(props.id)) {
+watch(() => props.paint, (newPaint: Record<string, any> | undefined) => {
+  if (map && map.value && map.value.getLayer(props.id) && newPaint) {
     Object.keys(newPaint).forEach(key => {
-      map.value.setPaintProperty(props.id, key, newPaint[key]);
+      map.value!.setPaintProperty(props.id, key, newPaint[key]);
     });
   }
 }, { deep: true });
 
 // Watch for layout changes
-watch(() => props.layout, (newLayout) => {
-  if (map.value && map.value.getLayer(props.id)) {
+watch(() => props.layout, (newLayout: Record<string, any> | undefined) => {
+  if (map && map.value && map.value.getLayer(props.id) && newLayout) {
     Object.keys(newLayout).forEach(key => {
-      map.value.setLayoutProperty(props.id, key, newLayout[key]);
+      map.value!.setLayoutProperty(props.id, key, newLayout[key]);
     });
   }
 }, { deep: true });
 
 // Watch for filter changes
-watch(() => props.filter, (newFilter) => {
-  if (map.value && map.value.getLayer(props.id)) {
+watch(() => props.filter, (newFilter: FilterSpecification | undefined) => {
+  if (map && map.value && map.value.getLayer(props.id)) {
     map.value.setFilter(props.id, newFilter);
   }
 });

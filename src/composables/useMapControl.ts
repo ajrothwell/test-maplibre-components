@@ -1,16 +1,24 @@
-import { inject, onBeforeUnmount, watchEffect } from 'vue';
+import { inject, onBeforeUnmount, watchEffect, type Ref } from 'vue';
+import type { Map as MapLibreMap, IControl } from 'maplibre-gl';
+
+interface MapControlProps {
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+}
 
 /**
  * Composable for creating MapLibre IControl components
  * Handles the boilerplate of adding/removing controls
  */
-export function useMapControl(props, createControlFn) {
-  const map = inject('map');
-  let control = null;
-  let stopWatch = null;
+export function useMapControl(
+  props: MapControlProps,
+  createControlFn: (map: MapLibreMap) => IControl
+) {
+  const map = inject<Ref<MapLibreMap | null>>('map');
+  let control: IControl | null = null;
+  let stopWatch: (() => void) | null = null;
 
   stopWatch = watchEffect(() => {
-    if (!map.value) return;
+    if (!map || !map.value) return;
 
     if (stopWatch) {
       stopWatch();
@@ -22,11 +30,11 @@ export function useMapControl(props, createControlFn) {
   });
 
   onBeforeUnmount(() => {
-    if (map.value && control) {
+    if (map && map.value && control) {
       try {
         map.value.removeControl(control);
       } catch (error) {
-        console.warn('Error removing control:', error.message);
+        console.warn('Error removing control:', (error as Error).message);
       }
     }
   });
@@ -34,12 +42,24 @@ export function useMapControl(props, createControlFn) {
   return { map, control };
 }
 
+interface ButtonControl extends IControl {
+  _map?: MapLibreMap;
+  _container?: HTMLDivElement;
+  _button?: HTMLButtonElement;
+}
+
 /**
  * Factory for creating standard button controls
  */
-export function createButtonControl(icon, image, title, iconSize, clickHandler) {
+export function createButtonControl(
+  icon?: string,
+  image?: string,
+  title?: string,
+  iconSize?: number,
+  clickHandler?: (this: GlobalEventHandlers, ev: MouseEvent) => any
+): ButtonControl {
   return {
-    onAdd(map) {
+    onAdd(map: MapLibreMap): HTMLElement {
       this._map = map;
       this._container = document.createElement('div');
       this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
@@ -47,8 +67,8 @@ export function createButtonControl(icon, image, title, iconSize, clickHandler) 
       this._button = document.createElement('button');
       this._button.className = 'map-button';
       this._button.type = 'button';
-      this._button.title = title;
-      this._button.onclick = clickHandler;
+      this._button.title = title || '';
+      this._button.onclick = clickHandler || null;
 
       // If image is provided, use it as background
       if (image) {
@@ -61,7 +81,7 @@ export function createButtonControl(icon, image, title, iconSize, clickHandler) 
         // Otherwise use icon
         const iconElement = document.createElement('i');
         iconElement.className = icon;
-        iconElement.style.fontSize = `${iconSize}px`;
+        iconElement.style.fontSize = `${iconSize || 16}px`;
         this._button.appendChild(iconElement);
       }
 
@@ -70,7 +90,7 @@ export function createButtonControl(icon, image, title, iconSize, clickHandler) 
       return this._container;
     },
 
-    onRemove() {
+    onRemove(): void {
       if (this._container && this._container.parentNode) {
         this._container.parentNode.removeChild(this._container);
       }

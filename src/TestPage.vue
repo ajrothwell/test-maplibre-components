@@ -1,18 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
+import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl'
 import Map from './components/Map.vue'
 import MapLayer from './components/MapLayer.vue'
 
-const center = ref([-74.5, 40])
-const zoom = ref(16)
-const mapInstance = ref(null)
+const center = ref<[number, number]>([-74.5, 40])
+const zoom = ref<number>(16)
+const mapInstance = ref<MapLibreMap | null>(null)
 
-const handleMapLoad = (map) => {
+const handleMapLoad = (map: MapLibreMap) => {
   console.log('Map loaded!')
   mapInstance.value = map
 }
 
-const handleMapClick = (e) => {
+const handleMapClick = (e: MapMouseEvent) => {
   console.log('Map clicked at:', e.lngLat)
 }
 

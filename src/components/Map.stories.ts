@@ -1,8 +1,9 @@
+import type { Meta, StoryObj } from '@storybook/vue3'
 import Map from './Map.vue'
 import MapLayer from './MapLayer.vue'
 import { toRefs } from 'vue'
 
-export default {
+const meta: Meta<typeof Map> = {
   title: 'MapLibre/Map',
   component: Map,
   tags: ['autodocs'],
@@ -70,8 +71,11 @@ export default {
   })
 }
 
+export default meta
+type Story = StoryObj<typeof Map>
+
 // Default story with basic settings
-export const Default = {
+export const Default: Story = {
   args: {
     center: [-74.5, 40],
     zoom: 16,
@@ -91,7 +95,7 @@ export const Default = {
 }
 
 // Map with custom center
-export const SanFrancisco = {
+export const SanFrancisco: Story = {
   args: {
     center: [-122.4194, 37.7749],
     zoom: 13,
@@ -109,7 +113,7 @@ export const SanFrancisco = {
 }
 
 // Map with tilt (pitch)
-export const WithPitch = {
+export const WithPitch: Story = {
   args: {
     center: [-74.0060, 40.7128], // New York
     zoom: 16,
@@ -127,7 +131,7 @@ export const WithPitch = {
 }
 
 // Map with rotation (bearing)
-export const WithRotation = {
+export const WithRotation: Story = {
   args: {
     center: [2.3522, 48.8566], // Paris
     zoom: 14,

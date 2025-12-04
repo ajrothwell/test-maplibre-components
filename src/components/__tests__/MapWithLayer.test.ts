@@ -1,29 +1,33 @@
 import { mount, flushPromises } from '@vue/test-utils'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { nextTick, h } from 'vue'
 import Map from '../Map.vue'
 import MapLayer from '../MapLayer.vue'
 
-// Create mock map instance
+// Create mock map instance with proper typing
 const mockMap = {
-  on: vi.fn(),
-  once: vi.fn(),
-  remove: vi.fn(),
-  addLayer: vi.fn(),
-  addSource: vi.fn(),
-  getLayer: vi.fn(() => null),
-  getSource: vi.fn(() => null),
-  getCenter: vi.fn(() => ({ lng: 0, lat: 0 })),
-  getZoom: vi.fn(() => 10),
-  setCenter: vi.fn(),
-  setZoom: vi.fn(),
-  setStyle: vi.fn(),
-  loaded: vi.fn(() => true),
-  setPaintProperty: vi.fn(),
-  setLayoutProperty: vi.fn(),
-  setFilter: vi.fn(),
-  removeLayer: vi.fn(),
-  removeSource: vi.fn()
+  on: vi.fn() as Mock,
+  once: vi.fn() as Mock,
+  remove: vi.fn() as Mock,
+  addLayer: vi.fn() as Mock,
+  addSource: vi.fn() as Mock,
+  getLayer: vi.fn(() => null) as Mock,
+  getSource: vi.fn(() => null) as Mock,
+  getCenter: vi.fn(() => ({ lng: 0, lat: 0 })) as Mock,
+  getZoom: vi.fn(() => 10) as Mock,
+  setCenter: vi.fn() as Mock,
+  setZoom: vi.fn() as Mock,
+  setStyle: vi.fn() as Mock,
+  loaded: vi.fn(() => true) as Mock,
+  setPaintProperty: vi.fn() as Mock,
+  setLayoutProperty: vi.fn() as Mock,
+  setFilter: vi.fn() as Mock,
+  removeLayer: vi.fn() as Mock,
+  removeSource: vi.fn() as Mock,
+  setPitch: vi.fn() as Mock,
+  setBearing: vi.fn() as Mock,
+  setMinZoom: vi.fn() as Mock,
+  setMaxZoom: vi.fn() as Mock
 }
 
 // Mock maplibre-gl
