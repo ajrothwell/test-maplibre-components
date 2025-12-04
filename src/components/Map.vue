@@ -100,6 +100,18 @@ watch(() => props.zoom, (newZoom) => {
   }
 });
 
+watch(() => props.pitch, (newPitch) => {
+  if (map.value) {
+    map.value.setPitch(newPitch);
+  }
+});
+
+watch(() => props.bearing, (newBearing) => {
+  if (map.value) {
+    map.value.setBearing(newBearing);
+  }
+});
+
 watch(() => props.style, (newStyle) => {
   if (map.value) {
     map.value.setStyle(newStyle);
