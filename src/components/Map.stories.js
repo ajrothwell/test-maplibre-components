@@ -33,7 +33,7 @@ export default {
     }
   },
   parameters: {
-    layout: 'centered',
+    layout: 'padded',
     docs: {
       description: {
         component: 'The Map component is the core container for MapLibre GL maps. It provides a reactive interface for controlling the map view.'
@@ -46,7 +46,7 @@ export default {
       return { ...toRefs(args) }
     },
     template: `
-      <div style="width: 40vw; height: 60vh;">
+      <div style="position: relative; width: 800px; height: 600px;">
         <Map
           :center="center"
           :zoom="zoom"
@@ -81,7 +81,7 @@ export const Default = {
     maxZoom: 22
   },
   parameters: {
-    layout: 'centered',
+    layout: 'padded',
     docs: {
       description: {
         story: 'Basic map with OpenStreetMap raster tiles. Use the controls to adjust center, zoom, pitch, and bearing.'
@@ -99,7 +99,7 @@ export const SanFrancisco = {
     bearing: 0
   },
   parameters: {
-    layout: 'centered',
+    layout: 'padded',
     docs: {
       description: {
         story: 'Map centered on San Francisco.'
@@ -117,7 +117,7 @@ export const WithPitch = {
     bearing: 0
   },
   parameters: {
-    layout: 'centered',
+    layout: 'padded',
     docs: {
       description: {
         story: 'Map with 60-degree pitch for a 3D perspective view.'
@@ -135,7 +135,7 @@ export const WithRotation = {
     bearing: 45
   },
   parameters: {
-    layout: 'centered',
+    layout: 'padded',
     docs: {
       description: {
         story: 'Map centered on Paris with 45-degree rotation.'
