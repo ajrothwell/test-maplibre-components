@@ -94,6 +94,26 @@ npm run test:e2e:headed    # Watch browser
 
 See [TESTING.md](./TESTING.md) for detailed testing documentation.
 
+## Component Documentation
+
+This project uses Storybook to showcase and document each component interactively.
+
+**View components:**
+```bash
+npm run storybook
+```
+
+Then open http://localhost:6006 to browse all components with:
+- Live interactive demos
+- Prop controls to modify component behavior in real-time
+- Auto-generated documentation
+- Accessibility testing (a11y addon)
+
+**Build Storybook:**
+```bash
+npm run build-storybook
+```
+
 ## Development
 
 ```bash
@@ -102,6 +122,9 @@ npm install
 
 # Start dev server
 npm run dev
+
+# Start Storybook
+npm run storybook
 
 # Build for production
 npm run build
@@ -115,6 +138,7 @@ npm run preview
 - **Vue 3** - Composition API with `<script setup>`
 - **MapLibre GL** - Open-source mapping library
 - **Vite** - Build tool and dev server
+- **Storybook** - Component development and documentation
 - **Vitest** - Unit testing framework
 - **Playwright** - E2E testing framework
 - **@vue/test-utils** - Vue component testing utilities
