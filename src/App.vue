@@ -1,137 +1,166 @@
-<template>
-  <div class="app">
-    <header>
-      <h1>🗺️ MapLibre Vue Demo</h1>
-      <p>Interactive map component built with Vue 3 and MapLibre GL JS</p>
-    </header>
-
-    <div class="controls">
-      <button @click="flyToNewYork">Fly to New York</button>
-      <button @click="flyToLondon">Fly to London</button>
-      <button @click="flyToTokyo">Fly to Tokyo</button>
-      <button @click="addMarker">Add Random Marker</button>
-      <button @click="clearMarkers">Clear Markers</button>
-    </div>
-
-    <div class="map-wrapper">
-      <Map 
-        :center="mapCenter"
-        :zoom="mapZoom"
-        :style="mapStyle"
-        @load="onMapLoad"
-        @click="onMapClick"
-        @move="onMapMove"
-        ref="mapRef"
-      />
-      
-      <div class="info-panel" v-if="clickedCoords">
-        <strong>Last Click:</strong><br>
-        Lat: {{ clickedCoords.lat.toFixed(4) }}<br>
-        Lng: {{ clickedCoords.lng.toFixed(4) }}
-      </div>
-
-      <div class="info-panel bottom" v-if="currentCenter">
-        <strong>Current View:</strong><br>
-        Zoom: {{ currentZoom.toFixed(2) }}<br>
-        Center: {{ currentCenter.lng.toFixed(4) }}, {{ currentCenter.lat.toFixed(4) }}
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref } from 'vue';
 import Map from './components/Map.vue';
-import maplibregl from 'maplibre-gl';
+import MapLayer from './components/MapLayer.vue';
+import MapMarker from './components/MapMarker.vue';
+import DrawTool from './components/DrawTool.vue';
+import MapNavigationControl from './components/MapNavigationControl.vue';
+import GeolocationButton from './components/GeolocationButton.vue';
+import ImageryToggleButton from './components/ImageryToggleButton.vue';
+import StreetViewButton from './components/StreetViewButton.vue';
+import MeasureButton from './components/MeasureButton.vue';
+import imageryIcon from './assets/images/imagery_small.png';
+import basemapIcon from './assets/images/basemap_small.png';
 
-const mapRef = ref(null);
-const mapCenter = ref([-74.5, 40.7]);
-const mapZoom = ref(9);
-const mapStyle = ref('https://demotiles.maplibre.org/style.json');
+const mapCenter = ref([-75.1652, 39.9526]);
+const mapZoom = ref(16);
 
 const clickedCoords = ref(null);
 const currentCenter = ref(null);
 const currentZoom = ref(9);
-const markers = ref([]);
 
 const onMapLoad = (map) => {
   console.log('Map loaded successfully!', map);
-  
-  // Add a default marker at the initial center
-  const marker = new maplibregl.Marker({ color: '#FF0000' })
-    .setLngLat([-74.5, 40.7])
-    .setPopup(new maplibregl.Popup().setHTML('<h3>Welcome!</h3><p>This is New York area</p>'))
-    .addTo(map);
-  
-  markers.value.push(marker);
 };
 
 const onMapClick = (e) => {
-  clickedCoords.value = e.lngLat;
-  console.log('Clicked at:', e.lngLat);
+  clickedCoords.value = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+  console.log('Clicked at:', clickedCoords.value);
 };
 
 const onMapMove = (data) => {
+  // console.log('Map moved. New center:', data.center, 'New zoom:', data.zoom);
   currentCenter.value = data.center;
   currentZoom.value = data.zoom;
 };
 
-const flyToNewYork = () => {
-  if (mapRef.value && mapRef.value.map) {
-    mapRef.value.map.flyTo({
-      center: [-74.006, 40.7128],
-      zoom: 11,
-      duration: 2000
-    });
-  }
+const onPolygonComplete = (geojson) => {
+  console.log('Polygon completed:', geojson);
 };
 
-const flyToLondon = () => {
-  if (mapRef.value && mapRef.value.map) {
-    mapRef.value.map.flyTo({
-      center: [-0.1278, 51.5074],
-      zoom: 11,
-      duration: 2000
-    });
-  }
+const onImageryToggled = (visible) => {
+  console.log('Imagery visible:', visible);
 };
 
-const flyToTokyo = () => {
-  if (mapRef.value && mapRef.value.map) {
-    mapRef.value.map.flyTo({
-      center: [139.6917, 35.6895],
-      zoom: 11,
-      duration: 2000
-    });
-  }
+const onUserLocated = ({ longitude, latitude, accuracy }) => {
+  console.log('User location:', longitude, latitude, 'accuracy:', accuracy);
 };
 
-const addMarker = () => {
-  if (mapRef.value && mapRef.value.map) {
-    const map = mapRef.value.map;
-    const center = map.getCenter();
-    
-    // Random offset
-    const lng = center.lng + (Math.random() - 0.5) * 0.1;
-    const lat = center.lat + (Math.random() - 0.5) * 0.1;
-    
-    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    const marker = new maplibregl.Marker({ color: randomColor })
-      .setLngLat([lng, lat])
-      .setPopup(new maplibregl.Popup().setHTML(`<p>Random marker #${markers.value.length + 1}</p>`))
-      .addTo(map);
-    
-    markers.value.push(marker);
-  }
+const onStreetViewOpened = ({ lat, lng }) => {
+  console.log('Street View opened at:', lat, lng);
 };
 
-const clearMarkers = () => {
-  markers.value.forEach(marker => marker.remove());
-  markers.value = [];
+const onMeasured = ({ totalDistance, unit }) => {
+  console.log(`Measured: ${totalDistance} ${unit}`);
 };
+
 </script>
+
+<template>
+  <div class="app">
+    <header>
+      <h1>MapLibre Vue Demo</h1>
+    </header>
+
+    <div class="content">
+      <div class="map-wrapper">
+        <Map
+          :center="mapCenter"
+          :zoom="mapZoom"
+          @load="onMapLoad"
+          @click="onMapClick"
+          @move="onMapMove"
+        >
+          <MapNavigationControl position="bottom-left" />
+          <MapLayer
+            id="arcgis-basemap"
+            type="raster"
+            :source="{
+              type: 'raster',
+              tiles: ['https://tiles.arcgis.com/tiles/fLeGjb7u4uXqeF9q/arcgis/rest/services/CityBasemap/MapServer/tile/{z}/{y}/{x}'],
+              tileSize: 256
+            }"
+          />
+          <MapLayer
+            id="arcgis-labels"
+            type="raster"
+            :source="{
+              type: 'raster',
+              tiles: ['https://tiles.arcgis.com/tiles/fLeGjb7u4uXqeF9q/arcgis/rest/services/CityBasemap_Labels/MapServer/tile/{z}/{y}/{x}'],
+              tileSize: 256
+            }"
+          />
+          <MapLayer
+            id="polygon-layer"
+            type="fill"
+            :source="{
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [[
+                    [-75.1604584292295, 39.9518650981126],
+                    [-75.1605218078484, 39.9515794078712],
+                    [-75.1605568434826, 39.9514228459539],
+                    [-75.1605725222228, 39.9513519636303],
+                    [-75.1614653081383, 39.9514694472814],
+                    [-75.1613505586104, 39.9519836083619],
+                    [-75.1604584292295, 39.9518650981126]
+                  ]]
+                }
+              }
+            }"
+            :paint="{
+              'fill-color': '#088',
+              'fill-opacity': 0.5
+            }"
+          />
+          <MapMarker
+            :lngLat="[-75.1652, 39.9526]"
+            color="#FF0000"
+            popup="<h3>Welcome!</h3><p>This is Philadelphia</p>"
+          />
+          <MapMarker
+            :lngLat="[-75.1650, 39.9530]"
+            icon="fa-solid fa-camera"
+            iconSize="28"
+            iconColor="#2563eb"
+            popup="<h3>Camera Location</h3><p>Photo spot</p>"
+          />
+
+          <!-- Interactive Controls -->
+          <GeolocationButton
+            position="bottom-left"
+            @located="onUserLocated"
+          />
+          <ImageryToggleButton
+            :iconImage="imageryIcon"
+            :basemapImage="basemapIcon"
+            position="top-right"
+            imageryUrl="https://tiles.arcgis.com/tiles/fLeGjb7u4uXqeF9q/arcgis/rest/services/CityImagery_2024_1in/MapServer/tile/{z}/{y}/{x}"
+            imageryLabelsUrl="https://tiles.arcgis.com/tiles/fLeGjb7u4uXqeF9q/arcgis/rest/services/CityImagery_Labels/MapServer/tile/{z}/{y}/{x}"
+            baseLayerId="arcgis-labels"
+            @toggled="onImageryToggled"
+          />
+          <StreetViewButton
+            position="top-right"
+            @opened="onStreetViewOpened"
+          />
+          <!-- <MeasureButton
+            position="top-right"
+            unit="feet"
+            @measured="onMeasured"
+          /> -->
+          <DrawTool
+            position="bottom-right"
+            @polygonComplete="onPolygonComplete"
+          />
+        </Map>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .app {
@@ -143,78 +172,33 @@ const clearMarkers = () => {
 }
 
 header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0f4d90;
   color: white;
-  padding: 1.5rem 2rem;
+  padding: 0.75rem 1.5rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 header h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2rem;
+  margin: 0;
+  font-size: 1.5rem;
   font-weight: 700;
 }
 
-header p {
-  margin: 0;
-  opacity: 0.9;
-  font-size: 1rem;
-}
-
-.controls {
+.content {
+  flex: 1;
   display: flex;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  flex-wrap: wrap;
-}
-
-.controls button {
-  padding: 0.5rem 1rem;
-  background: white;
-  border: 2px solid #667eea;
-  color: #667eea;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.controls button:hover {
-  background: #667eea;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  flex-direction: row-reverse;
+  overflow: hidden;
 }
 
 .map-wrapper {
-  flex: 1;
+  width: 50%;
   position: relative;
   overflow: hidden;
 }
 
-.info-panel {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: white;
-  padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  font-size: 0.9rem;
-  z-index: 1;
-  min-width: 200px;
-}
-
-.info-panel.bottom {
-  top: auto;
-  bottom: 10px;
-}
-
-.info-panel strong {
-  color: #667eea;
-  display: block;
-  margin-bottom: 0.5rem;
+.sidebar {
+  width: 50%;
+  background: #f8f9fa;
 }
 </style>

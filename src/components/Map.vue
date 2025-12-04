@@ -1,9 +1,5 @@
-<template>
-  <div ref="mapContainer" class="map-container"></div>
-</template>
-
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, provide } from 'vue';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -14,11 +10,11 @@ const props = defineProps({
   },
   zoom: {
     type: Number,
-    default: 9
+    default: 16
   },
   style: {
     type: [String, Object],
-    default: 'https://demotiles.maplibre.org/style.json'
+    default: undefined
   },
   minZoom: {
     type: Number,
@@ -43,17 +39,28 @@ const emit = defineEmits(['load', 'click', 'move', 'zoom', 'mapInstance']);
 const mapContainer = ref(null);
 const map = ref(null);
 
+// Provide map instance to child components
+provide('map', map);
+
 onMounted(() => {
+  // Create a blank style if no style is provided
+  const mapStyle = props.style || {
+    version: 8,
+    sources: {},
+    layers: []
+  };
+
   // Initialize the map
   map.value = new maplibregl.Map({
     container: mapContainer.value,
-    style: props.style,
+    style: mapStyle,
     center: props.center,
     zoom: props.zoom,
     minZoom: props.minZoom,
     maxZoom: props.maxZoom,
     pitch: props.pitch,
-    bearing: props.bearing
+    bearing: props.bearing,
+    attributionControl: false
   });
 
   // Emit map instance to parent
@@ -78,9 +85,6 @@ onMounted(() => {
   map.value.on('zoom', () => {
     emit('zoom', map.value.getZoom());
   });
-
-  // Add navigation controls
-  map.value.addControl(new maplibregl.NavigationControl(), 'top-right');
 });
 
 // Watch for prop changes
@@ -114,10 +118,20 @@ defineExpose({
 });
 </script>
 
+<template>
+  <div ref="mapContainer" class="map-container">
+    <slot></slot>
+  </div>
+</template>
+
 <style scoped>
 .map-container {
   width: 100%;
   height: 100%;
-  min-height: 400px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
 }
 </style>
