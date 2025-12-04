@@ -46,7 +46,7 @@ export default {
       return { ...toRefs(args) }
     },
     template: `
-      <div style="width: 100vw; height: 100vh;">
+      <div style="width: 40vw; height: 60vh;">
         <Map
           :center="center"
           :zoom="zoom"
