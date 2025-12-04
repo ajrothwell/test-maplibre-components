@@ -33,7 +33,7 @@ export default {
     }
   },
   parameters: {
-    layout: 'fullscreen',
+    layout: 'centered',
     docs: {
       description: {
         component: 'The Map component is the core container for MapLibre GL maps. It provides a reactive interface for controlling the map view.'
