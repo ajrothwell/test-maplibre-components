@@ -41,36 +41,6 @@ export default {
   }
 }
 
-// Basic map with default settings
-export const Basic = {
-  args: {
-    center: [-74.5, 40],
-    zoom: 16,
-    pitch: 0,
-    bearing: 0,
-    minZoom: 0,
-    maxZoom: 22
-  },
-  render: (args) => ({
-    components: { Map },
-    setup() {
-      return { args }
-    },
-    template: `
-      <div style="width: 100vw; height: 100vh;">
-        <Map
-          :center="args.center"
-          :zoom="args.zoom"
-          :pitch="args.pitch"
-          :bearing="args.bearing"
-          :minZoom="args.minZoom"
-          :maxZoom="args.maxZoom"
-        />
-      </div>
-    `
-  })
-}
-
 // Map with OpenStreetMap raster layer
 export const WithRasterLayer = {
   args: {
