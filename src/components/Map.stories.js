@@ -1,5 +1,6 @@
 import Map from './Map.vue'
 import MapLayer from './MapLayer.vue'
+import { toRefs } from 'vue'
 
 export default {
   title: 'MapLibre/Map',
@@ -38,25 +39,21 @@ export default {
         component: 'The Map component is the core container for MapLibre GL maps. It provides a reactive interface for controlling the map view.'
       }
     }
-  }
-}
-
-// Map with OpenStreetMap raster layer
-export const WithRasterLayer = {
-  args: {
-    center: [-74.5, 40],
-    zoom: 16
   },
   render: (args) => ({
     components: { Map, MapLayer },
     setup() {
-      return { args }
+      return { ...toRefs(args) }
     },
     template: `
       <div style="width: 100vw; height: 100vh;">
         <Map
-          :center="args.center"
-          :zoom="args.zoom"
+          :center="center"
+          :zoom="zoom"
+          :pitch="pitch || 0"
+          :bearing="bearing || 0"
+          :minZoom="minZoom || 0"
+          :maxZoom="maxZoom || 22"
         >
           <MapLayer
             id="osm-raster"
@@ -70,50 +67,40 @@ export const WithRasterLayer = {
         </Map>
       </div>
     `
-  }),
+  })
+}
+
+// Default story with basic settings
+export const Default = {
+  args: {
+    center: [-74.5, 40],
+    zoom: 16,
+    pitch: 0,
+    bearing: 0,
+    minZoom: 0,
+    maxZoom: 22
+  },
   parameters: {
     docs: {
       description: {
-        story: 'Map with an OpenStreetMap raster tile layer.'
+        story: 'Basic map with OpenStreetMap raster tiles. Use the controls to adjust center, zoom, pitch, and bearing.'
       }
     }
   }
 }
 
 // Map with custom center
-export const CustomLocation = {
+export const SanFrancisco = {
   args: {
-    center: [-122.4194, 37.7749], // San Francisco
-    zoom: 13
+    center: [-122.4194, 37.7749],
+    zoom: 13,
+    pitch: 0,
+    bearing: 0
   },
-  render: (args) => ({
-    components: { Map, MapLayer },
-    setup() {
-      return { args }
-    },
-    template: `
-      <div style="width: 100vw; height: 100vh;">
-        <Map
-          :center="args.center"
-          :zoom="args.zoom"
-        >
-          <MapLayer
-            id="osm-raster"
-            type="raster"
-            :source="{
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256
-            }"
-          />
-        </Map>
-      </div>
-    `
-  }),
   parameters: {
     docs: {
       description: {
-        story: 'Map centered on San Francisco with OpenStreetMap tiles.'
+        story: 'Map centered on San Francisco.'
       }
     }
   }
@@ -127,32 +114,6 @@ export const WithPitch = {
     pitch: 60,
     bearing: 0
   },
-  render: (args) => ({
-    components: { Map, MapLayer },
-    setup() {
-      return { args }
-    },
-    template: `
-      <div style="width: 100vw; height: 100vh;">
-        <Map
-          :center="args.center"
-          :zoom="args.zoom"
-          :pitch="args.pitch"
-          :bearing="args.bearing"
-        >
-          <MapLayer
-            id="osm-raster"
-            type="raster"
-            :source="{
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256
-            }"
-          />
-        </Map>
-      </div>
-    `
-  }),
   parameters: {
     docs: {
       description: {
@@ -170,32 +131,6 @@ export const WithRotation = {
     pitch: 0,
     bearing: 45
   },
-  render: (args) => ({
-    components: { Map, MapLayer },
-    setup() {
-      return { args }
-    },
-    template: `
-      <div style="width: 100vw; height: 100vh;">
-        <Map
-          :center="args.center"
-          :zoom="args.zoom"
-          :pitch="args.pitch"
-          :bearing="args.bearing"
-        >
-          <MapLayer
-            id="osm-raster"
-            type="raster"
-            :source="{
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256
-            }"
-          />
-        </Map>
-      </div>
-    `
-  }),
   parameters: {
     docs: {
       description: {
